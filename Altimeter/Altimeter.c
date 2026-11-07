@@ -15,7 +15,7 @@ uint8_t read_reg(uint8_t reg) {
     /*true and false decide whether the conversation ends. Since you're using one wire to comm yo
     u don't want it to be taken so you have true in write because you 
     need to recieve the answer in the same convo. when you have read the convo can end with false. write is to write a command
-    so that the sensor sends a byte to reg. Read is when the sensor returns that. The sensor's chip id is stored at &reg so that's what it
+    so that the pico sends the register address to the sensor. Read is when the sensor returns whats on that address. The sensor's chip id is stored at &reg so that's what it
     needs to return us.*/
     i2c_write_blocking(i2c0, BMP_ADDR, &reg, 1, true);
     uint8_t chip_id;
