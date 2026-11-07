@@ -9,7 +9,7 @@
 #define REG_ODR 0x1D 
 #define REG_TEMP_DATA 0x07
 #define REG_CALIB 0x31
-
+#include <math.h>
 
 typedef struct calib_t {
 
@@ -107,6 +107,20 @@ uint32_t read_raw_temp(void) {
 
 }
 
+double parse_temp(calib_t *c) {
+
+    double par_t1 = c->t1 * pow(2, 8);
+    double par_t2 = c->t2 / pow(2, 30);
+    double par_t3 = c->t3 / pow(2, 48);
+
+    double d1 = read_raw_temp() - par_t1;
+    double d2 = d1 * par_t2;
+    double temp = d2 + (d1 * d1) * par_t3;
+
+    return temp;
+
+}
+
 
 int main()
 {
@@ -127,7 +141,7 @@ int main()
     while (true) {
         printf("P %lu  T %lu\n", read_raw_pressure(), read_raw_temp());
         
-        printf("t1 %d  t3 %d  p2 %d  p11 %d\n", cal.t1, cal.t3, cal.p2, cal.p11);
+        printf("Temperate deg C: %.2f\n", parse_temp(&cal));
     
         sleep_ms(1000);
     }
