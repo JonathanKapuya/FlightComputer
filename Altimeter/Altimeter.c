@@ -7,7 +7,58 @@
 #define REG_PRESS_DATA 0x04
 #define REG_OSR 0x1C
 #define REG_ODR 0x1D 
+#define REG_TEMP_DATA 0x07
+#define REG_CALIB 0x31
 
+
+typedef struct calib_t {
+
+    uint16_t t1;
+    uint16_t t2;
+    int8_t t3;
+    int16_t p1;
+    int16_t p2;
+    int8_t p3;
+    int8_t p4;
+    uint16_t p5;
+    uint16_t p6;
+    int8_t p7;
+    int8_t p8;
+    int16_t p9;
+    int8_t p10;
+    int8_t p11;
+
+} calib_t;
+
+calib_t parse_calib(uint8_t *c) {
+
+    calib_t out;
+
+    out.t1 = (uint16_t)c[1] << 8 | c[0];
+    out.t2 = (uint16_t)c[3] << 8 | c[2];
+    out.t3 = (int8_t)c[4];
+    out.p1 = (int16_t)((uint16_t)c[6] << 8 | c[5]);
+    out.p2 = (int16_t)((uint16_t)c[8] << 8 | c[7]);
+    out.p3 = (int8_t)c[9];
+    out.p4 = (int8_t)c[10];
+    out.p5 = (uint16_t)c[12] << 8 | c[11];
+    out.p6 = (uint16_t)c[14] << 8 | c[13];
+    out.p7 = (int8_t)c[15];
+    out.p8 = (int8_t)c[16];
+    out.p9 = (int16_t)((uint16_t)c[18] << 8 | c[17]);
+    out.p10 = (int8_t)c[19];
+    out.p11 = (int8_t)c[20];
+    return out;
+
+}
+
+
+void read_bytes(uint8_t reg, uint8_t *buf, size_t len) {
+
+    i2c_write_blocking(i2c0, BMP_ADDR, &reg, 1, true);
+    i2c_read_blocking(i2c0, BMP_ADDR, buf, len, false);
+
+}
 
 
 uint8_t read_reg(uint8_t reg) {
@@ -36,14 +87,24 @@ void write_reg(uint8_t reg, uint8_t value) {
 
 uint32_t read_raw_pressure(void) {
 
-    //#define does not write into memory so you need to make a var that holds address of it
+    //#define does not write into memory so you need to make a var that holds the value of the address and use &
     uint8_t reg = REG_PRESS_DATA;
 
-    i2c_write_blocking(i2c0, BMP_ADDR, &reg, 1, true);
     uint8_t data[3];
-    i2c_read_blocking(i2c0, BMP_ADDR, data, 3, false);
+    read_bytes(reg, data, 3);
     uint32_t bytes = (uint32_t) data[2] << 8*2 | data[1] << 8 | data[0];
     return bytes;
+}
+
+uint32_t read_raw_temp(void) {
+
+    //#define does not write into memory so you need to make a var that holds the value of the address and use &
+    uint8_t reg = REG_TEMP_DATA;
+    uint8_t data[3];
+    read_bytes(reg, data, 3);
+    uint32_t bytes = (uint32_t) data[2] << 8*2 | data[1] << 8 | data[0];
+    return bytes;
+
 }
 
 
@@ -58,8 +119,16 @@ int main()
     write_reg(REG_ODR, 0x03);
     write_reg(REG_PWR_CTRL, 0x33); //0x33 is 0x for hex then each 3 is 0011 which sends command to power everything on and measure cont.
 
+    uint8_t calib[21];
+    read_bytes(REG_CALIB, calib, 21);
+
+    calib_t cal = parse_calib(calib);
+
     while (true) {
-        printf("%lu\n", read_raw_pressure());
+        printf("P %lu  T %lu\n", read_raw_pressure(), read_raw_temp());
+        
+        printf("t1 %d  t3 %d  p2 %d  p11 %d\n", cal.t1, cal.t3, cal.p2, cal.p11);
+    
         sleep_ms(1000);
     }
 
