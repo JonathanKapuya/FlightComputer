@@ -10,6 +10,7 @@
 #define REG_TEMP_DATA 0x07
 #define REG_CALIB 0x31
 #include <math.h>
+//~/.pico-sdk/picotool/*/picotool/picotool load -x -f build/Altimeter.uf2
 
 typedef struct calib_t {
 
@@ -195,7 +196,8 @@ int main()
         double pa = compensate_press(rp, t, &cal);
         double altitude_m = pressure_to_altitude(pa, p0);
         double smooth = smooth + 0.1 * (altitude_m - smooth);
-        printf("Altitude (m): %.2f m\n", smooth);
+        uint32_t now = to_ms_since_boot(get_absolute_time());
+        printf("%lu,%.3f,%.1f,%.2f\n", now, smooth, pa, t);
     
         sleep_ms(100);
     }
