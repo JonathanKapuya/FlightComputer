@@ -169,7 +169,7 @@ int main()
     write_reg(REG_OSR, 0x03);
     write_reg(REG_ODR, 0x03);
     write_reg(REG_PWR_CTRL, 0x33); //0x33 is 0x for hex then each 3 is 0011 which sends command to power everything on and measure cont.
-
+    sleep_ms(200);
     uint8_t calib[21];
     read_bytes(REG_CALIB, calib, 21);
 
@@ -186,19 +186,18 @@ int main()
 
     }
     double p0 = sum/10;
-
+    double smooth = 0;
     while (true) {
-
-        printf("P %lu  T %lu\n", read_raw_pressure(), read_raw_temp());
         
         uint32_t rt = read_raw_temp();
         uint32_t rp = read_raw_pressure();
         double t = compensate_temp(rt, &cal);
         double pa = compensate_press(rp, t, &cal);
         double altitude_m = pressure_to_altitude(pa, p0);
-        printf("Altitude (m): %.2f m\n", altitude_m);
+        double smooth = smooth + 0.1 * (altitude_m - smooth);
+        printf("Altitude (m): %.2f m\n", smooth);
     
-        sleep_ms(1000);
+        sleep_ms(100);
     }
 
 }
