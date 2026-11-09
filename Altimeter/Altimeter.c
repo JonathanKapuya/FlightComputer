@@ -151,6 +151,14 @@ double compensate_press(uint32_t raw_p, double t, calib_t *c) {
 
 }
 
+double pressure_to_altitude(double pa, double p0) {
+
+    double altitude = 44330 * (1 - pow((pa/p0), 1/5.255));
+    return altitude;
+
+}
+
+
 int main()
 {
     stdio_init_all();
@@ -167,14 +175,28 @@ int main()
 
     calib_t cal = parse_calib(calib);
 
+    double sum = 0;
+
+    for(int i = 0; i < 10; i++) {
+
+        double temp = compensate_temp(read_raw_temp(), &cal);
+        double pa = compensate_press(read_raw_pressure(), temp, &cal);
+        sum += pa;
+        sleep_ms(50);
+
+    }
+    double p0 = sum/10;
+
     while (true) {
+
         printf("P %lu  T %lu\n", read_raw_pressure(), read_raw_temp());
         
         uint32_t rt = read_raw_temp();
         uint32_t rp = read_raw_pressure();
         double t = compensate_temp(rt, &cal);
         double pa = compensate_press(rp, t, &cal);
-        printf("Pressure (pascals): %.2f\n", pa);
+        double altitude_m = pressure_to_altitude(pa, p0);
+        printf("Altitude (m): %.2f m\n", altitude_m);
     
         sleep_ms(1000);
     }
