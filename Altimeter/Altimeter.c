@@ -107,13 +107,15 @@ uint32_t read_raw_temp(void) {
 
 }
 
-double parse_temp(calib_t *c) {
+
+
+double compensate_temp(uint32_t raw_t, calib_t *c) {
 
     double par_t1 = c->t1 * pow(2, 8);
     double par_t2 = c->t2 / pow(2, 30);
     double par_t3 = c->t3 / pow(2, 48);
 
-    double d1 = read_raw_temp() - par_t1;
+    double d1 = raw_t - par_t1;
     double d2 = d1 * par_t2;
     double temp = d2 + (d1 * d1) * par_t3;
 
@@ -121,6 +123,33 @@ double parse_temp(calib_t *c) {
 
 }
 
+double compensate_press(uint32_t raw_p, double t, calib_t *c) {
+
+    //scale factory values
+    double par_p1  = (c->p1 - pow(2, 14)) / pow(2, 20);
+    double par_p2  = (c->p2 - pow(2, 14)) / pow(2, 29);
+    double par_p3  = c->p3  / pow(2, 32);
+    double par_p4  = c->p4  / pow(2, 37);
+    double par_p5  = c->p5  * pow(2, 3);
+    double par_p6  = c->p6  / pow(2, 6);
+    double par_p7  = c->p7  / pow(2, 8);
+    double par_p8  = c->p8  / pow(2, 15);
+    double par_p9  = c->p9  / pow(2, 48);
+    double par_p10 = c->p10 / pow(2, 48);
+    double par_p11 = c->p11 / pow(2, 65);
+
+    double p = (double)raw_p;
+
+    //shift reading based on temp
+    double out1 = par_p5 + par_p6 * t + par_p7 * t * t + par_p8 * t * t * t;
+    
+    double out2 = p * (par_p1 + par_p2 * t + par_p3 * t * t + par_p4 * t * t * t);
+    // Small corrections
+    double out3 = p * p * (par_p9 + par_p10 * t) + p * p * p * par_p11;
+
+    return out1 + out2 + out3;
+
+}
 
 int main()
 {
@@ -141,7 +170,11 @@ int main()
     while (true) {
         printf("P %lu  T %lu\n", read_raw_pressure(), read_raw_temp());
         
-        printf("Temperate deg C: %.2f\n", parse_temp(&cal));
+        uint32_t rt = read_raw_temp();
+        uint32_t rp = read_raw_pressure();
+        double t = compensate_temp(rt, &cal);
+        double pa = compensate_press(rp, t, &cal);
+        printf("Pressure (pascals): %.2f\n", pa);
     
         sleep_ms(1000);
     }
