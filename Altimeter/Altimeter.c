@@ -57,6 +57,7 @@ calib_t parse_calib(uint8_t *c) {
 
 void read_bytes(uint8_t reg, uint8_t *buf, size_t len) {
 
+    //#define is just swapped text, it has no address. Reg is a variable so &reg gives its address.
     i2c_write_blocking(i2c0, BMP_ADDR, &reg, 1, true);
     i2c_read_blocking(i2c0, BMP_ADDR, buf, len, false);
 
@@ -89,21 +90,16 @@ void write_reg(uint8_t reg, uint8_t value) {
 
 uint32_t read_raw_pressure(void) {
 
-    //#define does not write into memory so you need to make a var that holds the value of the address and use &
-    uint8_t reg = REG_PRESS_DATA;
-
     uint8_t data[3];
-    read_bytes(reg, data, 3);
+    read_bytes(REG_PRESS_DATA, data, 3);
     uint32_t bytes = (uint32_t) data[2] << 8*2 | data[1] << 8 | data[0];
     return bytes;
 }
 
 uint32_t read_raw_temp(void) {
 
-    //#define does not write into memory so you need to make a var that holds the value of the address and use &
-    uint8_t reg = REG_TEMP_DATA;
     uint8_t data[3];
-    read_bytes(reg, data, 3);
+    read_bytes(REG_TEMP_DATA, data, 3);
     uint32_t bytes = (uint32_t) data[2] << 8*2 | data[1] << 8 | data[0];
     return bytes;
 
@@ -146,7 +142,7 @@ double compensate_press(uint32_t raw_p, double t, calib_t *c) {
     double out1 = par_p5 + par_p6 * t + par_p7 * t * t + par_p8 * t * t * t;
     
     double out2 = p * (par_p1 + par_p2 * t + par_p3 * t * t + par_p4 * t * t * t);
-    // Small corrections
+    //small corrections
     double out3 = p * p * (par_p9 + par_p10 * t) + p * p * p * par_p11;
 
     return out1 + out2 + out3;
