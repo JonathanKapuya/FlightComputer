@@ -9,14 +9,14 @@ def main():
     times = []
     alts = []
     with open (filename) as f:
-        reader = csv.DictReader(f)
+        reader = csv.DictReader(f) #reads each line as a dictionary
         for row in reader:
-            times.append((float(row["time_ms"])/1000))
+            times.append((float(row["time_ms"])/1000)) #ms to s
             alts.append(float(row["altitude_m"]))
 
     start = times[0]
     for i in range(len(times)):
-        times[i] -= start
+        times[i] -= start #start time may not be 0
 
     plt.plot(times, alts)
     plt.xlabel("Time (s)")

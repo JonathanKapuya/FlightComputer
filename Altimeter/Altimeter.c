@@ -9,6 +9,7 @@
 #define REG_ODR 0x1D 
 #define REG_TEMP_DATA 0x07
 #define REG_CALIB 0x31
+#define REG_STATUS 0x03
 #include <math.h>
 //~/.pico-sdk/picotool/*/picotool/picotool load -x -f build/Altimeter.uf2
 
@@ -159,6 +160,21 @@ double pressure_to_altitude(double pa, double p0) {
 
 }
 
+void wait_for_data(void) {
+
+    uint8_t reg = REG_STATUS;
+    uint8_t data;
+    uint8_t mask = 0x60;
+    while(true) {
+        read_bytes(reg, &data, 1);
+        sleep_ms(5);
+        if((data & mask) == mask) {
+            return;
+        }
+
+    }
+
+}
 
 int main()
 {
@@ -170,7 +186,7 @@ int main()
     write_reg(REG_OSR, 0x03);
     write_reg(REG_ODR, 0x03);
     write_reg(REG_PWR_CTRL, 0x33); //0x33 is 0x for hex then each 3 is 0011 which sends command to power everything on and measure cont.
-    sleep_ms(200);
+    wait_for_data();
     uint8_t calib[21];
     read_bytes(REG_CALIB, calib, 21);
 
@@ -195,7 +211,8 @@ int main()
         double t = compensate_temp(rt, &cal);
         double pa = compensate_press(rp, t, &cal);
         double altitude_m = pressure_to_altitude(pa, p0);
-        double smooth = smooth + 0.1 * (altitude_m - smooth);
+        if (altitude_m > 10000 || altitude_m < -10000) continue;
+        smooth = smooth + 0.1 * (altitude_m - smooth);
         uint32_t now = to_ms_since_boot(get_absolute_time());
         printf("%lu,%.3f,%.1f,%.2f\n", now, smooth, pa, t);
     
